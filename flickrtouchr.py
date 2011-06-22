@@ -22,7 +22,7 @@ import urlparse
 import urllib2
 import unicodedata
 import cPickle
-import md5
+import hashlib
 import sys
 import os
 
@@ -45,7 +45,7 @@ def getText(nodelist):
 def getfrob():
     # Create our signing string
     string = SHARED_SECRET + "api_key" + API_KEY + "methodflickr.auth.getFrob"
-    hash   = md5.new(string).digest().encode("hex")
+    hash   = hashlib.md5(string).hexdigest()
 
     # Formulate the request
     url    = "http://api.flickr.com/services/rest/?method=flickr.auth.getFrob"
@@ -75,7 +75,7 @@ def getfrob():
 #
 def froblogin(frob, perms):
     string = SHARED_SECRET + "api_key" + API_KEY + "frob" + frob + "perms" + perms
-    hash   = md5.new(string).digest().encode("hex")
+    hash   = hashlib.md5(string).hexdigest()
 
     # Formulate the request
     url    = "http://api.flickr.com/services/auth/?"
@@ -100,7 +100,7 @@ def froblogin(frob, perms):
 
     # Now, try and retrieve a token
     string = SHARED_SECRET + "api_key" + API_KEY + "frob" + frob + "methodflickr.auth.getToken"
-    hash   = md5.new(string).digest().encode("hex")
+    hash   = hashlib.md5(string).hexdigest()
     
     # Formulate the request
     url    = "http://api.flickr.com/services/rest/?method=flickr.auth.getToken"
@@ -142,7 +142,7 @@ def flickrsign(url, token):
     params.sort()
     for param in params:
         string += param.replace('=', '')
-    hash   = md5.new(string).digest().encode("hex")
+    hash   = hashlib.md5(string).hexdigest()
 
     # Now, append the api_key, and the api_sig args
     url += "&api_key=" + API_KEY + "&auth_token=" + token + "&api_sig=" + hash
@@ -172,7 +172,8 @@ def getphoto(id, token, filename):
         sizes =  dom.getElementsByTagName("size")
 
         # Grab the original if it exists
-        if (sizes[-1].getAttribute("label") == "Original"):
+        allowedTags = ("Original", "Video Original", "Large")
+        if (sizes[-1].getAttribute("label") in allowedTags):
           imgurl = sizes[-1].getAttribute("source")
         else:
           print "Failed to get original for photo id " + id
@@ -285,12 +286,14 @@ if __name__ == '__main__':
             dom = xml.dom.minidom.parse(response)
 
             # Get the total
-            pages = int(dom.getElementsByTagName("photo")[0].parentNode.getAttribute("pages"))
+            try:
+                pages = int(dom.getElementsByTagName("photo")[0].parentNode.getAttribute("pages"))
+            except IndexError:
+                pages = 0
 
             # Grab the photos
             for photo in dom.getElementsByTagName("photo"):
                 # Tell the user we're grabbing the file
-                print photo.getAttribute("title").encode("utf8") + " ... in set ... " + dir
 
                 # Grab the id
                 photoid = photo.getAttribute("id")
@@ -301,7 +304,12 @@ if __name__ == '__main__':
                 # Skip files that exist
                 if os.access(target, os.R_OK):
                     inodes[photoid] = target
+                    sys.stdout.write('.')
+                    sys.stdout.flush()
                     continue
+                else:
+                    print ''
+                    print photo.getAttribute("title").encode("utf8") + " ... in set ... " + dir
                 
                 # Look it up in our dictionary of inodes first
                 if photoid in inodes and inodes[photoid] and os.access(inodes[photoid], os.R_OK):
@@ -312,3 +320,4 @@ if __name__ == '__main__':
 
             # Move on the next page
             page = page + 1
+    print ""
