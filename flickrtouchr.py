@@ -68,7 +68,7 @@ def getfrob():
         return frob
 
     except:
-        raise "Could not retrieve frob"
+        raise Exception("Could not retrieve frob")
 
 #
 # Login and get a token
@@ -125,7 +125,7 @@ def froblogin(frob, perms):
         # Return the token and userid
         return (nsid, token)
     except:
-        raise "Login failed"
+        raise Exception("Login failed")
 
 # 
 # Sign an arbitrary flickr request with a token
