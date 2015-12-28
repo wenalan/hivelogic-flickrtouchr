@@ -187,7 +187,7 @@ def getphoto(id, token, filename):
         data = response.read()
     
         # Save the file!
-        fh = open(filename, "w")
+        fh = open(filename, "wb")
         fh.write(data)
         fh.close()
 
